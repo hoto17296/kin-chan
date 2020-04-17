@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+
+  bot:
+    build: bot
+    env_file:
+      - ./bot/.env
+    environment:
+      LOG_LEVEL: DEBUG
+
+  selenium:
+    image: selenium/standalone-chrome
+    volumes:
+      - /dev/shm:/dev/shm
