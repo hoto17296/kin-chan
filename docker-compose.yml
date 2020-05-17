@@ -7,9 +7,20 @@ services:
     env_file:
       - ./bot/.env
     environment:
-      LOG_LEVEL: DEBUG
+      DEBUG: 1
+      DEBUG_USER_EMAIL: y.ishikawa@churadata.okinawa
+      SELENIUM_GRID_URL: http://selenium:4444/wd/hub
+    volumes:
+      - ./bot:/bot
 
   selenium:
     image: selenium/standalone-chrome
     volumes:
       - /dev/shm:/dev/shm
+
+  cron:
+    build: cron
+    environment:
+      TZ: Asia/Tokyo
+    volumes:
+      - ./cron/crontab:/var/spool/cron/crontabs/root

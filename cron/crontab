@@ -1,0 +1,2 @@
+30 11 * * * wget -q -O - http://bot/begin
+30 21 * * * wget -q -O - http://bot/end
