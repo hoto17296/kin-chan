@@ -8,8 +8,6 @@ services:
       - ./bot/.env
     environment:
       SELENIUM_GRID_URL: http://selenium:4444/wd/hub
-    volumes:
-      - ./bot:/bot
     restart: unless-stopped
 
   selenium:
