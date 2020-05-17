@@ -32,10 +32,10 @@ async def handler(request):
     kingtime_url = 'https://s3.kingtime.jp/independent/recorder/personal/'
     if request.match_info['mode'] == 'begin':
         text = f'出勤打刻を忘れていませんか？\n{kingtime_url}'
-        # df = df[df['勤務日'] & (df['出勤時間'].isna())]
+        df = df[df['勤務日'] & (df['出勤時間'].isna())]
     else:
         text = f'退勤打刻を忘れていませんか？\n{kingtime_url}'
-        # df = df[df['勤務日'] & (df['退勤時間'].isna())]
+        df = df[df['勤務日'] & (df['退勤時間'].isna())]
 
     # リマインドを送信
     logger.debug(f'send remind message to below users')
