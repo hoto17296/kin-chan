@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+
+  bot:
+    build: bot
+    env_file:
+      - ./bot/.env
+    environment:
+      SELENIUM_GRID_URL: http://selenium:4444/wd/hub
+    volumes:
+      - ./bot:/bot
+    restart: unless-stopped
+
+  selenium:
+    image: selenium/standalone-chrome
+    volumes:
+      - /dev/shm:/dev/shm
+    restart: unless-stopped
+
+  cron:
+    build: cron
+    environment:
+      TZ: Asia/Tokyo
+    volumes:
+      - ./cron/crontab:/var/spool/cron/crontabs/root
+    restart: unless-stopped
