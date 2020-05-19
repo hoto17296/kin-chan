@@ -18,8 +18,4 @@ services:
 
   cron:
     build: cron
-    environment:
-      TZ: Asia/Tokyo
-    volumes:
-      - ./cron/crontab:/var/spool/cron/crontabs/root
     restart: unless-stopped
