@@ -1,5 +1,5 @@
 from logging import getLogger
-import os
+from os import getenv
 import urllib.request
 import json
 import pandas as pd
@@ -41,20 +41,25 @@ def parse(df, df_users: pd.DataFrame, df_slack_users: pd.DataFrame) -> pd.DataFr
 async def fetch_data():
     # King of Time の管理画面をクロールする
     driver_opts = {
-        'command_executor': os.environ.get('SELENIUM_GRID_URL'),
+        'command_executor': getenv('SELENIUM_GRID_URL'),
         'desired_capabilities': DesiredCapabilities.CHROME,
     }
     with webdriver.Remote(**driver_opts) as driver:
         session = KingTimeSession(driver)
-        session.login(os.environ.get('KINGTIME_ADMIN_USERNAME'), os.environ.get('KINGTIME_ADMIN_PASSWORD'))
+        session.login(getenv('KINGTIME_ADMIN_USERNAME'), getenv('KINGTIME_ADMIN_PASSWORD'))
         df = session.get_daily_working_list()
         session.move_to_top()
         df_users = session.get_user_list()
     logger.debug(f'fetched {len(df_users)} King of Time users data')
 
     # Slack のユーザ情報と結合する
-    df_slack_users = fetch_slack_users(os.environ.get('SLACK_API_TOKEN'))
+    df_slack_users = fetch_slack_users(getenv('SLACK_API_TOKEN'))
     logger.debug(f'fetched {len(df_slack_users)} Slack users data')
     df_parsed = parse(df, df_users, df_slack_users)
     
     return df_parsed
+
+
+async def check_activated(pg, slack_user_id) -> bool:
+    query = 'SELECT COUNT(1) FROM users WHERE id = $1 AND active IS TRUE'
+    return (await pg.fetchval(query, slack_user_id)) > 0

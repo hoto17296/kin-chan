@@ -10,6 +10,9 @@ services:
       DEBUG: 1
       DEBUG_USER_EMAIL: y.ishikawa@churadata.okinawa
       SELENIUM_GRID_URL: http://selenium:4444/wd/hub
+      DATABASE_URL: postgres://postgres@db/
+    ports:
+      - 8080:80
     volumes:
       - ./bot:/bot
 
@@ -20,3 +23,13 @@ services:
 
   cron:
     build: cron
+
+  db:
+    image: postgres:alpine
+    ports:
+      - 15432:5432
+    volumes:
+      - postgres:/var/lib/postgresql/data
+
+volumes:
+  postgres:

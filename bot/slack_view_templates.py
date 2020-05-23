@@ -1,0 +1,96 @@
+activate = {
+  "type": "modal",
+  "title": {
+    "type": "plain_text",
+    "text": "King of Time Reminder",
+    "emoji": True
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "plain_text",
+        "text": "通知を有効にして時刻を設定しましょう"
+      },
+      "accessory": {
+        "type": "checkboxes",
+        "action_id": "active",
+        "options": [
+          {
+            "value": "active",
+            "text": {
+              "type": "plain_text",
+              "text": "リマインド通知を有効にする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "section",
+      "block_id": "t_begin",
+      "text": {
+        "type": "mrkdwn",
+        "text": "出勤リマインド時刻"
+      },
+      "accessory": {
+        "action_id": "select_begin",
+        "type": "static_select",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "--:--",
+        },
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": f'{h:02d}:{m:02d}'
+            },
+            "value": f'{h:02d}:{m:02d}'
+          }
+          for h in range(9, 13) for m in [0, 30]
+        ],
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "11:30"
+          },
+          "value": "11:30"
+        }
+      }
+    },
+    {
+      "type": "section",
+      "block_id": "t_end",
+      "text": {
+        "type": "mrkdwn",
+        "text": "退勤リマインド時刻"
+      },
+      "accessory": {
+        "action_id": "select_end",
+        "type": "static_select",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "--:--",
+        },
+        "options": [
+          {
+            "text": {
+              "type": "plain_text",
+              "text": f'{h:02d}:{m:02d}'
+            },
+            "value": f'{h:02d}:{m:02d}'
+          }
+          for h in range(18, 22) for m in [0, 30]
+        ],
+        "initial_option": {
+          "text": {
+            "type": "plain_text",
+            "text": "21:30"
+          },
+          "value": "21:30"
+        }
+      }
+    }
+  ]
+}
