@@ -3,7 +3,7 @@ from logging import getLogger
 from urllib.parse import parse_qsl
 import json
 from aiohttp import web
-from lib import fetch_data, check_activated
+from lib import fetch_data, check_activated, select_or_create_user
 from slackapi import require_signature
 import slack_view_templates
 
@@ -47,9 +47,8 @@ async def handler(request):
     # TODO この時間にリマインド設定しているユーザのみに通知するように変更
     logger.debug(f'send remind message to below users')
     logger.debug(df)
-    slack_api = SlackAPI(getenv('SLACK_API_TOKEN'))
     for _, row in df.iterrows():
-        slack_api['chat.postMessage'](channel=row['slack_user_id'], text=text, as_user=True)
+        request.app['slack']['chat.postMessage'](channel=row['slack_user_id'], text=text, as_user=True)
 
 
 @routes.post('/slack/command')
@@ -57,7 +56,6 @@ async def handler(request):
 async def slack_command(request):
     body = (await request.read()).decode()
     params = {k: v for k, v in parse_qsl(body)}
-    logger.debug(params)
 
     if params['command'] == '/kingoftime-reminder':
         # TODO 対象じゃないユーザの場合、エラーメッセージを出す
@@ -65,10 +63,12 @@ async def slack_command(request):
         response = web.Response()
         await response.prepare(request)
         await response.write_eof()
-        # TODO 現在のユーザの設定を取得する (該当ユーザがなければ作成する) params['user_id']
-        # Open Modal View
-        logger.debug(slack_view_templates.activate)
-        request.app['slack']['views.open'](trigger_id = params['trigger_id'], view = slack_view_templates.activate)
+        # ユーザの設定を取得する (該当ユーザがなければ作成する)
+        user = await select_or_create_user(request.app['pg'], params['user_id'])
+        logger.debug(user)
+        # Modal View を開く
+        view = slack_view_templates.activate(active=user['active'], t_begin=user['t_begin'], t_end=user['t_end'])
+        request.app['slack']['views.open'](trigger_id=params['trigger_id'], view=view)
         return response
     else:
         raise web.HTTPBadRequest()
@@ -81,23 +81,27 @@ async def slack_interactive_endpoint(request):
     data = json.loads({k: v for k, v in parse_qsl(body)}['payload'])
     slack_user_id = data['user']['id']
 
+    # 設定の変更を DB に保存する
     if data['type'] == 'block_actions':
         assert len(data['actions']) == 1
         action = data['actions'][0]
 
         if action['action_id'] == 'active':
             active = len(action['selected_options']) > 0
-            # TODO save
+            query = 'UPDATE users SET active = $1 WHERE id = $2'
+            await request.app['pg'].execute(query, active, slack_user_id)
             logger.debug(f'{active=}')
         
-        if action['action_id'] == 'select_begin':
+        if action['action_id'] == 't_begin':
             t_begin = action['selected_option']['value']
-            # TODO save
+            query = 'UPDATE users SET t_begin = $1 WHERE id = $2'
+            await request.app['pg'].execute(query, t_begin, slack_user_id)
             logger.debug(f'{t_begin=}')
         
-        if action['action_id'] == 'select_end':
+        if action['action_id'] == 't_end':
             t_end = action['selected_option']['value']
-            # TODO save
+            query = 'UPDATE users SET t_end = $1 WHERE id = $2'
+            await request.app['pg'].execute(query, t_end, slack_user_id)
             logger.debug(f'{t_end=}')
 
     return web.Response()

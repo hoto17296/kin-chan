@@ -5,6 +5,7 @@ import json
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+import asyncpg
 from kingtimesession import KingTimeSession
 from slackapi import SlackAPI
 
@@ -60,6 +61,22 @@ async def fetch_data():
     return df_parsed
 
 
-async def check_activated(pg, slack_user_id) -> bool:
+async def check_activated(pg, slack_user_id: str) -> bool:
     query = 'SELECT COUNT(1) FROM users WHERE id = $1 AND active IS TRUE'
     return (await pg.fetchval(query, slack_user_id)) > 0
+
+
+async def select_or_create_user(pg, slack_user_id: str) -> asyncpg.Record:
+    query = 'SELECT * FROM users WHERE id = $1'
+    row = await pg.fetchrow(query, slack_user_id)
+    if row:
+        return row
+    logger.info(f'New user (slack_user_id = {slack_user_id}) will be created.')
+    query = '''
+        INSERT
+        INTO users(id, t_begin, t_end)
+        VALUES($1, '11:30', '21:30')
+        '''
+    await pg.execute(query, slack_user_id)
+    query = 'SELECT * FROM users WHERE id = $1'
+    return await pg.fetchrow(query, slack_user_id)

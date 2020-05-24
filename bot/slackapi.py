@@ -1,9 +1,13 @@
+from logging import getLogger
 from time import time
 import urllib.request
 import json
 import hmac
 import hashlib
 from aiohttp.abc import AbstractView
+
+
+logger = getLogger(__name__)
 
 
 class SlackAPI:
@@ -22,7 +26,10 @@ class SlackAPI:
                 'Content-Type': f'application/json; charset={charset}',
             })
         with urllib.request.urlopen(req) as res:
-            return json.load(res)
+            data = json.load(res)
+        if not data['ok']:
+            logger.error(data)
+        return data
     
     def __getitem__(self, key: str):
         return lambda **kwargs: self(key, **kwargs)
