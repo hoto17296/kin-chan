@@ -18,7 +18,7 @@ def activate(active: bool, t_begin: str, t_end: str) -> dict:
           "type": "section",
           "text": {
             "type": "plain_text",
-            "text": "通知を有効にして時刻を設定しましょう"
+            "text": "設定した時刻に出退勤していなかった場合にリマインド通知を送ることができます"
           },
           "accessory": {
             "type": "checkboxes",
