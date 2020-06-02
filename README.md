@@ -1,6 +1,9 @@
 # kin-chan
 King of Time リマインダ bot
 
+## 構成
+![](architecture.png)
+
 ## 開発環境構築
 `bot/.env` ファイルを作成し環境変数を設定する。
 
