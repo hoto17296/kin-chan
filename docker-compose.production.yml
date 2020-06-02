@@ -9,6 +9,8 @@ services:
     environment:
       SELENIUM_GRID_URL: http://selenium:4444/wd/hub
       DATABASE_URL: postgres://postgres@db/
+    ports:
+      - 17296:80
     restart: unless-stopped
 
   selenium:
