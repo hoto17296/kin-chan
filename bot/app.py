@@ -5,6 +5,7 @@ if getenv('DEBUG'):
     logging.basicConfig(level=logging.DEBUG)
 
 from aiohttp import web
+import aiojobs.aiohttp as aiojobs
 import asyncpg
 from views import routes
 from slackapi import SlackAPI
@@ -24,6 +25,8 @@ app.on_startup.append(startup)
 app.on_cleanup.append(cleanup)
 
 app.add_routes(routes)
+
+aiojobs.setup(app)
 
 
 if __name__ == '__main__':

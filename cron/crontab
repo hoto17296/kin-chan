@@ -1,3 +1,17 @@
-30 11 * * * wget -q -O - http://bot/begin
-30 21 * * * wget -q -O - http://bot/end
+00 09 * * * wget -q -O - http://bot/schedule/09:00
+30 09 * * * wget -q -O - http://bot/schedule/09:30
+00 10 * * * wget -q -O - http://bot/schedule/10:00
+30 10 * * * wget -q -O - http://bot/schedule/10:30
+00 11 * * * wget -q -O - http://bot/schedule/11:00
+30 11 * * * wget -q -O - http://bot/schedule/11:30
+00 12 * * * wget -q -O - http://bot/schedule/12:00
+30 12 * * * wget -q -O - http://bot/schedule/12:30
+00 18 * * * wget -q -O - http://bot/schedule/18:00
+30 18 * * * wget -q -O - http://bot/schedule/18:30
+00 19 * * * wget -q -O - http://bot/schedule/19:00
+30 19 * * * wget -q -O - http://bot/schedule/19:30
+00 20 * * * wget -q -O - http://bot/schedule/20:00
+30 20 * * * wget -q -O - http://bot/schedule/20:30
+00 21 * * * wget -q -O - http://bot/schedule/21:00
+30 21 * * * wget -q -O - http://bot/schedule/21:30
 # EOF

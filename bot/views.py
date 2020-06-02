@@ -3,6 +3,7 @@ from logging import getLogger
 from urllib.parse import parse_qsl
 import json
 from aiohttp import web
+import aiojobs.aiohttp as aiojobs
 from lib import fetch_data, check_activated, select_or_create_user
 from slackapi import require_signature
 import slack_view_templates
@@ -13,42 +14,55 @@ logger = getLogger()
 routes = web.RouteTableDef()
 
 
-# TODO 時間を受け取るようにエンドポイントを修正 (cron も)
-@routes.get(r'/{mode:(begin|end)}')
-async def handler(request):
-    # 先に HTTP レスポンスを返しておく
-    response = web.Response()
-    await response.prepare(request)
-    await response.write_eof()
+# TODO cron 定義を修正
+async def job(hhmm, app):
+    # この時間に出勤リマインド設定しているユーザを検索
+    query = 'SELECT id FROM users WHERE t_begin = $1 AND active IS TRUE'
+    id_begin = [record['id'] for record in await app['pg'].fetch(query, hhmm)]
+    logger.warn(id_begin)
+
+    # この時間に退勤リマインド設定しているユーザを検索
+    query = 'SELECT id FROM users WHERE t_end = $1 AND active IS TRUE'
+    id_end = [record['id'] for record in await app['pg'].fetch(query, hhmm)]
+    logger.warn(id_end)
+
+    # 通知対象ユーザがいなければ終了
+    if len(id_begin) == 0 and len(id_end) == 0:
+        return
 
     # データをクロールする
     df = await fetch_data()
-    logger.debug(f'fetched {len(df)} rows')
+    logger.info(f'fetched {len(df)} rows')
 
-    # 開発中は特定のユーザ以外にはリマインドを送らないようにする
-    email = getenv('DEBUG_USER_EMAIL')
-    if getenv('DEBUG') and email:
-        df = df[df['メールアドレス'] == email]
-
-    # TODO この時間にリマインド設定しているユーザがいない場合は終了
-
-    # リマインド対象を絞り込む
-    mode = request.match_info['mode']
-    logger.debug(f'mode: {mode}')
     kingtime_url = 'https://s3.kingtime.jp/independent/recorder/personal/'
-    if request.match_info['mode'] == 'begin':
-        text = f'出勤打刻を忘れていませんか？\n{kingtime_url}'
-        df = df[df['勤務日'] & (df['出勤時間'].isna())]
-    else:
-        text = f'退勤打刻を忘れていませんか？\n{kingtime_url}'
-        df = df[df['勤務日'] & (df['退勤時間'].isna())]
 
-    # リマインドを送信
-    # TODO この時間にリマインド設定しているユーザのみに通知するように変更
-    logger.debug(f'send remind message to below users')
-    logger.debug(df)
-    for _, row in df.iterrows():
-        request.app['slack']['chat.postMessage'](channel=row['slack_user_id'], text=text, as_user=True)
+    # 出勤通知を送る
+    df_begin = df[df['勤務日'] & (df['出勤時間'].isna())]
+    text = f'出勤打刻を忘れていませんか？\n{kingtime_url}'
+    for _, user in df_begin[df_begin['slack_user_id'].isin(id_begin)].iterrows():
+        app['slack']['chat.postMessage'](channel=user['slack_user_id'], text=text, as_user=True)
+
+    # 退勤通知を送る
+    df_end = df[df['勤務日'] & (df['退勤時間'].isna())]
+    text = f'退勤打刻を忘れていませんか？\n{kingtime_url}'
+    for _, user in df_end[df_end['slack_user_id'].isin(id_end)].iterrows():
+        app['slack']['chat.postMessage'](channel=user['slack_user_id'], text=text, as_user=True)
+
+
+@routes.get(r'/schedule/{hh:\d\d}:{mm:\d\d}')
+async def schedule(request):
+    hhmm = request.match_info['hh'] + ':' + request.match_info['mm']
+    await aiojobs.spawn(request, job(hhmm, request.app))
+    return web.Response()
+
+
+async def open_slack_modal_view(app, params):
+    # ユーザの設定を取得する (該当ユーザがなければ作成する)
+    user = await select_or_create_user(app['pg'], params['user_id'])
+    logger.debug(user)
+    # モーダルを開く
+    view = slack_view_templates.activate(active=user['active'], t_begin=user['t_begin'], t_end=user['t_end'])
+    app['slack']['views.open'](trigger_id=params['trigger_id'], view=view)
 
 
 @routes.post('/slack/command')
@@ -57,21 +71,15 @@ async def slack_command(request):
     body = (await request.read()).decode()
     params = {k: v for k, v in parse_qsl(body)}
 
-    if params['command'] == '/kingoftime-reminder':
-        # TODO 対象じゃないユーザの場合、エラーメッセージを出す
-        # Send Response
-        response = web.Response()
-        await response.prepare(request)
-        await response.write_eof()
-        # ユーザの設定を取得する (該当ユーザがなければ作成する)
-        user = await select_or_create_user(request.app['pg'], params['user_id'])
-        logger.debug(user)
-        # Modal View を開く
-        view = slack_view_templates.activate(active=user['active'], t_begin=user['t_begin'], t_end=user['t_end'])
-        request.app['slack']['views.open'](trigger_id=params['trigger_id'], view=view)
-        return response
-    else:
+    if params['command'] != '/kingoftime-reminder':
         raise web.HTTPBadRequest()
+
+    # TODO 対象じゃないユーザの場合、エラーメッセージを出す
+
+    # views.open を待機しているとレスポンスが遅れてタイムアウトとなってしまうため、ジョブに回す
+    await aiojobs.spawn(request, open_slack_modal_view(request.app, params))
+
+    return web.Response()
 
 
 @routes.post('/slack/interactive-endpoint')
