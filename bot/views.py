@@ -14,7 +14,6 @@ logger = getLogger()
 routes = web.RouteTableDef()
 
 
-# TODO cron 定義を修正
 async def job(hhmm, app):
     # この時間に出勤リマインド設定しているユーザを検索
     query = 'SELECT id FROM users WHERE t_begin = $1 AND active IS TRUE'
