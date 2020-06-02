@@ -8,6 +8,7 @@ services:
       - ./bot/.env
     environment:
       SELENIUM_GRID_URL: http://selenium:4444/wd/hub
+      DATABASE_URL: postgres://postgres@db/
     restart: unless-stopped
 
   selenium:
@@ -19,3 +20,12 @@ services:
   cron:
     build: cron
     restart: unless-stopped
+
+  db:
+    image: postgres:alpine
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres:
