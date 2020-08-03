@@ -1,7 +1,7 @@
 # kin-chan
 King of Time リマインダ bot
 
-![](model.png)
+![](modal.png)
 
 ## 構成
 ![](architecture.png)
